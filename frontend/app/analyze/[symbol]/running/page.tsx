@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { AgentRail } from "@/components/AgentRail";
 import { InfoTip } from "@/components/InfoTip";
 import { StateBlock } from "@/components/StateBlock";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 
 export default function RunningPage() {
   const params = useParams<{ symbol: string }>();
@@ -26,7 +26,7 @@ export default function RunningPage() {
 
   useEffect(() => {
     if (!id) return;
-    const source = new EventSource(`/api/v1/analysis/${id}/events`);
+    const source = new EventSource(apiUrl(`/api/v1/analysis/${id}/events`));
     source.onmessage = () => query.refetch();
     source.addEventListener("agent_completed", () => query.refetch());
     source.addEventListener("agent_started", () => query.refetch());
