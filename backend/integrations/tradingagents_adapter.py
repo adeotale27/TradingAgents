@@ -37,6 +37,9 @@ class TradingAgentsAdapter:
         debate_rounds: int | None,
         temperature: float | None,
         output_language: str = "English",
+        google_thinking_level: str | None = None,
+        openai_reasoning_effort: str | None = None,
+        anthropic_effort: str | None = None,
     ) -> dict[str, Any]:
         config = deepcopy(DEFAULT_CONFIG)
         if llm_provider:
@@ -53,6 +56,12 @@ class TradingAgentsAdapter:
         if temperature is not None:
             config["temperature"] = temperature
         config["output_language"] = output_language
+        if google_thinking_level:
+            config["google_thinking_level"] = google_thinking_level
+        if openai_reasoning_effort:
+            config["openai_reasoning_effort"] = openai_reasoning_effort
+        if anthropic_effort:
+            config["anthropic_effort"] = anthropic_effort
         return config
 
     def run_analysis(

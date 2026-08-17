@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.core.deps import cancel_flag, clear_cancel, get_executor
 from backend.integrations.india import normalize_india_symbol
+from backend.integrations.llm_catalog import default_models, require_compatible
 from backend.integrations.normalize import first_paragraphs
 from backend.integrations.tradingagents_adapter import TradingAgentsAdapter
 from backend.models import AgentResult, Analysis, AnalysisEvent, Decision
@@ -39,8 +40,12 @@ def create_analysis(db: Session, user, body: AnalysisCreate) -> Analysis:
     settings = user_settings(user)
     symbol, exchange = normalize_india_symbol(body.symbol)
     analysts = body.selected_analysts or _analysts_from_settings(settings)
-    provider = body.llm_provider or settings.get("llm_provider") or "openai"
-    model = body.model or settings.get("model") or "gpt-5.5"
+    provider = (body.llm_provider or settings.get("llm_provider") or "openai").lower()
+    deep_default, quick_default = default_models(provider)
+    model = require_compatible(provider, body.model or settings.get("model") or deep_default, "Model")
+    quick_model = require_compatible(
+        provider, body.quick_model or settings.get("quick_model") or quick_default, "Quick model"
+    )
     depth = body.research_depth or settings.get("research_depth") or "medium"
     analysis = Analysis(
         user_id=user.id,
@@ -59,7 +64,9 @@ def create_analysis(db: Session, user, body: AnalysisCreate) -> Analysis:
         db.add(AgentResult(analysis_id=analysis.id, agent_name=name, status="waiting"))
     db.commit()
     db.refresh(analysis)
-    get_executor().submit(_run_job, analysis.id, body.model_dump(), settings)
+    payload = body.model_dump()
+    payload.update({"llm_provider": provider, "model": model, "quick_model": quick_model})
+    get_executor().submit(_run_job, analysis.id, payload, settings)
     return analysis
 
 
@@ -110,6 +117,9 @@ def _run_job(analysis_id: str, request: dict[str, Any], settings: dict[str, Any]
             debate_rounds=request.get("debate_rounds") or settings.get("debate_rounds"),
             temperature=request.get("temperature") if request.get("temperature") is not None else settings.get("temperature"),
             output_language=settings.get("output_language") or "English",
+            google_thinking_level=settings.get("google_thinking_level"),
+            openai_reasoning_effort=settings.get("openai_reasoning_effort"),
+            anthropic_effort=settings.get("anthropic_effort"),
         )
         flag = cancel_flag(analysis_id)
 

@@ -100,6 +100,11 @@ export const api = {
   settings: () => request<Settings>("/api/v1/settings"),
   saveSettings: (body: Partial<Settings>) =>
     request<Settings>("/api/v1/settings", { method: "PUT", body: JSON.stringify(body) }),
+  llmCatalog: () => request<{ providers: import("./types").LlmProvider[] }>("/api/v1/llm/catalog"),
+  universes: () =>
+    request<{
+      items: { id: string; label: string; stocks: { symbol: string; name: string; sector: string; label: string }[] }[];
+    }>("/api/v1/stocks/universes"),
   backtest: (body: Record<string, unknown>) =>
     request<Record<string, unknown>>("/api/v1/backtests", { method: "POST", body: JSON.stringify(body) }),
   adminHealth: () => request<Record<string, unknown>>("/api/v1/admin/health"),

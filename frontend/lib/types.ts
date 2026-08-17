@@ -84,4 +84,17 @@ export type Settings = {
   market_data_provider: string;
   refresh_interval_seconds: number;
   output_language: string;
+  google_thinking_level?: string | null;
+  openai_reasoning_effort?: string | null;
+  anthropic_effort?: string | null;
+};
+
+export type LlmOption = { id: string; label: string };
+export type LlmProvider = {
+  id: string;
+  label: string;
+  quick: LlmOption[];
+  deep: LlmOption[];
+  allows_custom: boolean;
+  thinking_modes: LlmOption[];
 };

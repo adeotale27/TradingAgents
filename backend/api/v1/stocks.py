@@ -1,15 +1,20 @@
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.integrations.india import catalog_name, search_catalog
-from backend.integrations.market_data import classify_regime, get_market_provider
+from backend.integrations.india import catalog_name, list_universes, search_catalog
+from backend.integrations.market_data import get_market_provider
 from backend.schemas import Candle, StockQuote
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
 @router.get("/search")
-def search_stocks(q: str = Query("", min_length=0)):
-    return {"results": search_catalog(q)}
+def search_stocks(q: str = Query("", min_length=0), universe: str = Query("ALL")):
+    return {"results": search_catalog(q, universe=universe)}
+
+
+@router.get("/universes")
+def stock_universes():
+    return {"items": list_universes()}
 
 
 @router.get("/{symbol}", response_model=StockQuote)

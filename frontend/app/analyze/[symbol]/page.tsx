@@ -49,6 +49,7 @@ function AnalyzeInner() {
         research_depth: depth,
         llm_provider: settings.data?.llm_provider,
         model: settings.data?.model,
+        quick_model: settings.data?.quick_model,
         selected_analysts: [
           settings.data?.enable_technical === false ? null : "market",
           settings.data?.enable_sentiment === false ? null : "social",

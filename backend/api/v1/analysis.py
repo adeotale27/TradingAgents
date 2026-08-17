@@ -19,7 +19,10 @@ def start_analysis(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    analysis = create_analysis(db, user, body)
+    try:
+        analysis = create_analysis(db, user, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return AnalysisQueued(analysis_id=analysis.id, status=analysis.status)
 
 

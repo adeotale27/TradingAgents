@@ -7,12 +7,30 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from backend.core.security import create_access_token, hash_password, verify_password
+from backend.integrations.llm_catalog import default_models, require_compatible
 from backend.models import User
 from backend.schemas import SettingsIn, UserOut
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SETTINGS = SettingsIn().model_dump()
+DEFAULT_SETTINGS = {
+    "llm_provider": "openai",
+    "model": "gpt-5.5",
+    "quick_model": "gpt-5.4-mini",
+    "temperature": None,
+    "research_depth": "medium",
+    "debate_rounds": 1,
+    "enable_sentiment": True,
+    "enable_news": True,
+    "enable_fundamentals": True,
+    "enable_technical": True,
+    "market_data_provider": "yahoo",
+    "refresh_interval_seconds": 60,
+    "output_language": "English",
+    "google_thinking_level": "minimal",
+    "openai_reasoning_effort": "medium",
+    "anthropic_effort": "high",
+}
 
 
 def seed_admin(db: Session, email: str, password: str, name: str) -> User:
@@ -66,6 +84,26 @@ def user_settings(user: User) -> dict:
         return {**DEFAULT_SETTINGS, **json.loads(user.settings_json)}
     except json.JSONDecodeError:
         return DEFAULT_SETTINGS.copy()
+
+
+def coerce_provider_models(data: dict) -> dict:
+    """If the stored model does not belong to the provider, pick that provider's defaults.
+
+    Used for settings display/save after a provider switch. Analysis start still
+    rejects incompatible pairs instead of translating names.
+    """
+    provider = (data.get("llm_provider") or "openai").lower()
+    data["llm_provider"] = provider
+    deep, quick = default_models(provider)
+    try:
+        require_compatible(provider, data.get("model"), "Model")
+    except ValueError:
+        data["model"] = deep
+    try:
+        require_compatible(provider, data.get("quick_model"), "Quick model")
+    except ValueError:
+        data["quick_model"] = quick
+    return data
 
 
 def to_user_out(user: User) -> UserOut:

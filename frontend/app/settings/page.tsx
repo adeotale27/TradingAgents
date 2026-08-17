@@ -1,23 +1,55 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InfoTip } from "@/components/InfoTip";
 import { api } from "@/lib/api";
-import type { Settings } from "@/lib/types";
+import type { LlmProvider, Settings } from "@/lib/types";
 
 export default function SettingsPage() {
   const query = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const catalog = useQuery({ queryKey: ["llm-catalog"], queryFn: api.llmCatalog });
   const [form, setForm] = useState<Settings | null>(null);
   useEffect(() => {
     if (query.data) setForm(query.data);
   }, [query.data]);
   const save = useMutation({ mutationFn: () => api.saveSettings(form || {}) });
+  const providers = catalog.data?.providers || [];
+  const current = useMemo(
+    () => providers.find((item) => item.id === form?.llm_provider) || providers[0],
+    [providers, form?.llm_provider],
+  );
   if (!form) return <p className="text-mist">Loading setup…</p>;
+
+  function applyProvider(next: LlmProvider) {
+    setForm((prev) => {
+      if (!prev) return prev;
+      const deepOk = next.deep.some((item) => item.id === prev.model);
+      const quickOk = next.quick.some((item) => item.id === prev.quick_model);
+      return {
+        ...prev,
+        llm_provider: next.id,
+        model: deepOk ? prev.model : next.deep[0]?.id || "",
+        quick_model: quickOk ? prev.quick_model : next.quick[0]?.id || "",
+        google_thinking_level: next.id === "google" ? prev.google_thinking_level || "minimal" : prev.google_thinking_level,
+        openai_reasoning_effort: next.id === "openai" ? prev.openai_reasoning_effort || "medium" : prev.openai_reasoning_effort,
+        anthropic_effort: next.id === "anthropic" ? prev.anthropic_effort || "high" : prev.anthropic_effort,
+      };
+    });
+  }
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
+
+  const thinkingKey =
+    form.llm_provider === "google"
+      ? "google_thinking_level"
+      : form.llm_provider === "openai"
+        ? "openai_reasoning_effort"
+        : form.llm_provider === "anthropic"
+          ? "anthropic_effort"
+          : null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -25,26 +57,70 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-line bg-ink-800 p-4 space-y-3">
         <h2 className="text-sm text-mist">
           LLM
-          <InfoTip text="API keys stay in the backend .env. The browser never receives provider secrets." />
+          <InfoTip text="Models are filtered by provider. Google never accepts gpt-* IDs. Keys stay in .env." />
         </h2>
         <Field label="Provider">
-          <select value={form.llm_provider} onChange={(e) => set("llm_provider", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2">
-            {["openai", "google", "anthropic", "ollama", "openrouter", "deepseek", "groq"].map((p) => (
-              <option key={p}>{p}</option>
+          <select
+            value={form.llm_provider || ""}
+            onChange={(e) => {
+              const next = providers.find((item) => item.id === e.target.value);
+              if (next) applyProvider(next);
+            }}
+            className="w-full rounded-md border border-line bg-ink-900 px-2 py-2"
+          >
+            {providers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
             ))}
           </select>
         </Field>
         <Field label="Deep model">
-          <input value={form.model} onChange={(e) => set("model", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2" />
+          <select
+            value={form.model || ""}
+            onChange={(e) => set("model", e.target.value)}
+            className="w-full rounded-md border border-line bg-ink-900 px-2 py-2"
+          >
+            {(current?.deep || []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label="Quick model">
-          <input value={form.quick_model || ""} onChange={(e) => set("quick_model", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2" />
+          <select
+            value={form.quick_model || ""}
+            onChange={(e) => set("quick_model", e.target.value)}
+            className="w-full rounded-md border border-line bg-ink-900 px-2 py-2"
+          >
+            {(current?.quick || []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </Field>
+        {thinkingKey && (current?.thinking_modes || []).length > 0 && (
+          <Field label="Thinking mode">
+            <select
+              value={(form[thinkingKey] as string) || ""}
+              onChange={(e) => set(thinkingKey, e.target.value)}
+              className="w-full rounded-md border border-line bg-ink-900 px-2 py-2"
+            >
+              {current.thinking_modes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Temperature">
           <input type="number" step="0.1" value={form.temperature ?? ""} onChange={(e) => set("temperature", e.target.value === "" ? null : Number(e.target.value))} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2" />
         </Field>
         <Field label="Research depth">
-          <select value={form.research_depth} onChange={(e) => set("research_depth", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2">
+          <select value={form.research_depth || "medium"} onChange={(e) => set("research_depth", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2">
             <option value="shallow">shallow</option>
             <option value="medium">medium</option>
             <option value="deep">deep</option>
@@ -57,7 +133,7 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-line bg-ink-800 p-4 space-y-3">
         <h2 className="text-sm text-mist">Market data</h2>
         <Field label="Provider">
-          <select value={form.market_data_provider} onChange={(e) => set("market_data_provider", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2">
+          <select value={form.market_data_provider || "yahoo"} onChange={(e) => set("market_data_provider", e.target.value)} className="w-full rounded-md border border-line bg-ink-900 px-2 py-2">
             <option value="yahoo">yahoo</option>
             <option value="nse">nse (via yahoo until a broker feed is configured)</option>
           </select>

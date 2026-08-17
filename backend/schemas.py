@@ -148,6 +148,9 @@ class SettingsIn(BaseModel):
     market_data_provider: str = "yahoo"
     refresh_interval_seconds: int = 60
     output_language: str = "English"
+    google_thinking_level: str | None = None
+    openai_reasoning_effort: str | None = None
+    anthropic_effort: str | None = None
 
 
 class BacktestCreate(BaseModel):
