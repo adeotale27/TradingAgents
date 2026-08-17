@@ -216,7 +216,9 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Web terminal
-data/
+/data/
+!backend/data/
+!backend/data/*.csv
 frontend/node_modules/
 frontend/.next/
 frontend/tsconfig.tsbuildinfo
