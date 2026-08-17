@@ -36,9 +36,29 @@ ALL_AGENTS = [
 ]
 
 
+class ActiveRunError(ValueError):
+    def __init__(self, analysis: Analysis):
+        self.analysis = analysis
+        super().__init__(
+            f"{analysis.symbol} is already {analysis.status}. Open that job or cancel it before starting another."
+        )
+
+
 def create_analysis(db: Session, user, body: AnalysisCreate) -> Analysis:
     settings = user_settings(user)
     symbol, exchange = normalize_india_symbol(body.symbol)
+    active = (
+        db.query(Analysis)
+        .filter(
+            Analysis.user_id == user.id,
+            Analysis.symbol == symbol,
+            Analysis.status.in_(("queued", "running")),
+        )
+        .order_by(Analysis.created_at.desc())
+        .first()
+    )
+    if active:
+        raise ActiveRunError(active)
     analysts = body.selected_analysts or _analysts_from_settings(settings)
     provider = (body.llm_provider or settings.get("llm_provider") or "openai").lower()
     deep_default, quick_default = default_models(provider)
@@ -102,6 +122,12 @@ def _run_job(analysis_id: str, request: dict[str, Any], settings: dict[str, Any]
     try:
         analysis = db.get(Analysis, analysis_id)
         if not analysis:
+            return
+        if analysis.status == "cancelled" or cancel_flag(analysis_id).is_set():
+            analysis.status = "cancelled"
+            analysis.error_message = analysis.error_message or "Cancelled by user"
+            analysis.completed_at = datetime.now(timezone.utc)
+            db.commit()
             return
         analysis.status = "running"
         analysis.started_at = datetime.now(timezone.utc)

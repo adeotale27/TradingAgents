@@ -67,6 +67,7 @@ class AnalysisOut(BaseModel):
     agents: list["AgentResultOut"] = Field(default_factory=list)
     decision: "DecisionOut | None" = None
     payload: dict[str, Any] | None = None
+    progress: dict[str, Any] | None = None
 
 
 class AnalysisQueued(BaseModel):

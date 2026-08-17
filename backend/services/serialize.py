@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from backend.integrations.pipeline import progress_from_agents
 from backend.models import AgentResult, Analysis, Decision
 from backend.schemas import AgentResultOut, AnalysisOut, DecisionOut
 
@@ -48,6 +49,7 @@ def serialize_analysis(analysis: Analysis, include_payload: bool = True) -> Anal
         agents=agents,
         decision=decision,
         payload=payload if include_payload else None,
+        progress=progress_from_agents(analysis.agents, analysis.status),
     )
 
 

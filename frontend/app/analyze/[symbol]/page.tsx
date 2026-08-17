@@ -7,6 +7,7 @@ import { Suspense, useState } from "react";
 import { AgentRail } from "@/components/AgentRail";
 import { DecisionBadge } from "@/components/DecisionBadge";
 import { InfoTip } from "@/components/InfoTip";
+import { StatusChip } from "@/components/JobQueue";
 import { PriceChart } from "@/components/PriceChart";
 import { StateBlock } from "@/components/StateBlock";
 import { api } from "@/lib/api";
@@ -37,6 +38,7 @@ function AnalyzeInner() {
     queryFn: () => api.listAnalysis(`?symbol=${encodeURIComponent(symbol)}`),
   });
   const latest = history.data?.items.find((item) => item.status === "completed") || history.data?.items[0];
+  const active = history.data?.items.find((item) => item.status === "queued" || item.status === "running");
   const detail = useQuery({
     queryKey: ["analysis", latest?.analysis_id],
     queryFn: () => api.getAnalysis(latest!.analysis_id),
@@ -58,6 +60,16 @@ function AnalyzeInner() {
         ].filter(Boolean),
       }),
     onSuccess: (res) => router.push(`/analyze/${encodeURIComponent(symbol)}/running?id=${res.analysis_id}`),
+    onError: (err) => {
+      const detail = (err as { detail?: { analysis_id?: string } }).detail;
+      if (detail?.analysis_id) {
+        router.push(`/analyze/${encodeURIComponent(symbol)}/running?id=${detail.analysis_id}`);
+      }
+    },
+  });
+  const cancel = useMutation({
+    mutationFn: () => api.cancelAnalysis(active!.analysis_id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["history", symbol] }),
   });
   const watch = useMutation({
     mutationFn: () => api.addWatch(symbol),
@@ -86,16 +98,39 @@ function AnalyzeInner() {
           <button
             onClick={() => start.mutate()}
             className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-ink-950 disabled:opacity-50"
-            disabled={start.isPending}
+            disabled={start.isPending || Boolean(active)}
           >
-            {start.isPending ? "Queuing…" : "ANALYZE"}
+            {active ? `Already ${active.status}` : start.isPending ? "Queuing…" : "ANALYZE"}
           </button>
+          {active && (
+            <>
+              <Link
+                href={`/analyze/${encodeURIComponent(symbol)}/running?id=${active.analysis_id}`}
+                className="rounded-md border border-gold/40 px-3 py-2 text-sm text-gold"
+              >
+                Open job
+              </Link>
+              <button onClick={() => cancel.mutate()} className="rounded-md border border-loss/40 px-3 py-2 text-sm text-loss">
+                Cancel
+              </button>
+            </>
+          )}
           <button onClick={() => watch.mutate()} className="rounded-md border border-line px-3 py-2 text-sm">
             Watch
           </button>
         </div>
       </div>
 
+      {active && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm">
+          <StatusChip status={active.status} />
+          <span>
+            {active.progress?.step
+              ? `Step ${active.progress.step} of ${active.progress.total}: ${active.progress.title}`
+              : "This name is already in the queue. Cancel it or wait — a second run is blocked until it finishes or fails."}
+          </span>
+        </div>
+      )}
       {quote.isError && (
         <StateBlock title="Unable to retrieve market data." message={(quote.error as Error).message} onRetry={() => quote.refetch()} />
       )}

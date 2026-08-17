@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend.core.db import get_db
 from backend.core.deps import get_current_user
 from backend.models import Analysis, User
 from backend.schemas import AnalysisCreate, AnalysisQueued
-from backend.services.analysis import cancel_analysis, create_analysis
+from backend.services.analysis import ActiveRunError, cancel_analysis, create_analysis
 from backend.services.events import event_bus, sse_pack
 from backend.services.serialize import serialize_analysis
 
@@ -21,6 +21,16 @@ def start_analysis(
 ):
     try:
         analysis = create_analysis(db, user, body)
+    except ActiveRunError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": str(exc),
+                "analysis_id": exc.analysis.id,
+                "status": exc.analysis.status,
+                "symbol": exc.analysis.symbol,
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return AnalysisQueued(analysis_id=analysis.id, status=analysis.status)
@@ -33,10 +43,15 @@ def list_analysis(
     symbol: str | None = None,
     decision: str | None = None,
 ):
-    query = db.query(Analysis).filter(Analysis.user_id == user.id).order_by(Analysis.created_at.desc())
+    query = (
+        db.query(Analysis)
+        .options(joinedload(Analysis.agents))
+        .filter(Analysis.user_id == user.id)
+        .order_by(Analysis.created_at.desc())
+    )
     if symbol:
         query = query.filter(Analysis.symbol == symbol.upper())
-    rows = query.limit(100).all()
+    rows = query.limit(100).unique().all()
     items = [serialize_analysis(row, include_payload=False) for row in rows]
     if decision:
         items = [item for item in items if (item.final_decision or "").upper() == decision.upper()]

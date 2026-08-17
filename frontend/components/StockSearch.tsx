@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 
 export function StockSearch() {
   const router = useRouter();
-  const [universe, setUniverse] = useState("NIFTY50");
+  const [universe, setUniverse] = useState("NIFTY500");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const universes = useQuerySafe();

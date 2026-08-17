@@ -50,6 +50,7 @@ export default function LoginPage() {
       </form>
       <p className="mt-4 text-xs text-mist">
         Engine: {health.data?.status === "ok" ? "online" : health.isError ? "backend unreachable" : "checking…"}
+        {" "}· v{(health.data as { version?: string } | undefined)?.version || "1.1.0"}
         . Local default login is admin@local / admin123 until you change it.
       </p>
     </div>

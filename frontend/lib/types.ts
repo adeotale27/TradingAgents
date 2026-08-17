@@ -61,6 +61,13 @@ export type Analysis = {
   agents: AgentResult[];
   decision: Decision | null;
   payload: Record<string, unknown> | null;
+  progress?: {
+    step: number;
+    total: number;
+    title: string;
+    detail: string;
+    steps: { index: number; title: string; detail: string; agents: string[] }[];
+  } | null;
 };
 
 export type User = {

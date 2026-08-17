@@ -68,6 +68,28 @@ SECTOR_ETFS = [
 ]
 
 
+def load_nifty500() -> list[tuple[str, str, str]]:
+    import csv
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "data" / "nifty500.csv"
+    rows: list[tuple[str, str, str]] = []
+    if not path.exists():
+        return list(NIFTY_50)
+    with path.open(encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            symbol = (row.get("Symbol") or "").strip().upper()
+            name = (row.get("Company Name") or symbol).strip()
+            sector = (row.get("Industry") or "NSE").strip()
+            if symbol:
+                rows.append((f"{symbol}.NS", name, sector))
+    return rows or list(NIFTY_50)
+
+
+NIFTY_500 = load_nifty500()
+
+
 def normalize_india_symbol(raw: str) -> tuple[str, str]:
     symbol = raw.strip().upper()
     if symbol.endswith(".BO"):
@@ -76,7 +98,7 @@ def normalize_india_symbol(raw: str) -> tuple[str, str]:
         return symbol, "NSE"
     if symbol.startswith("^"):
         return symbol, "INDEX"
-    nse = {ticker for ticker, _, _ in NIFTY_50}
+    nse = {ticker for ticker, _, _ in NIFTY_500}
     if f"{symbol}.NS" in nse:
         return f"{symbol}.NS", "NSE"
     return f"{symbol}.NS", "NSE"
@@ -131,6 +153,7 @@ SENSEX = [
 ]
 
 UNIVERSES = {
+    "NIFTY500": {"label": "NIFTY 500", "rows": NIFTY_500},
     "NIFTY50": {"label": "NIFTY 50", "rows": NIFTY_50},
     "BANKNIFTY": {"label": "BANK NIFTY", "rows": BANK_NIFTY},
     "SENSEX": {"label": "SENSEX", "rows": SENSEX},
@@ -141,7 +164,7 @@ def universe_rows(universe: str | None) -> list[tuple[str, str, str]]:
     if not universe or universe.upper() == "ALL":
         seen = set()
         rows = []
-        for key in ("NIFTY50", "BANKNIFTY", "SENSEX"):
+        for key in ("NIFTY500", "NIFTY50", "BANKNIFTY", "SENSEX"):
             for row in UNIVERSES[key]["rows"]:
                 if row[0] not in seen:
                     seen.add(row[0])

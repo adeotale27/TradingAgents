@@ -44,14 +44,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     window.location.href = "/login";
   }
   if (!response.ok) {
-    let detail = response.statusText;
+    let detail: unknown = response.statusText;
     try {
       const body = await response.json();
-      detail = body.detail || JSON.stringify(body);
+      detail = body.detail ?? body;
     } catch {
       /* ignore */
     }
-    throw new Error(detail);
+    const message =
+      typeof detail === "string"
+        ? detail
+        : (detail as { message?: string })?.message || JSON.stringify(detail);
+    const error = new Error(message) as Error & { status: number; detail: unknown };
+    error.status = response.status;
+    error.detail = detail;
+    throw error;
   }
   return response.json() as Promise<T>;
 }
@@ -67,7 +74,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password, name }),
     }),
-  health: () => request<{ status: string }>("/api/v1/health"),
+  health: () => request<{ status: string; version?: string; engine_version?: string }>("/api/v1/health"),
   market: () => request<{ indices: Quote[]; regime: string | null; error?: string }>("/api/v1/market/overview"),
   search: (q: string) =>
     request<{ results: { symbol: string; name: string; sector: string; exchange: string }[] }>(

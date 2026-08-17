@@ -13,6 +13,15 @@ def test_search_catalog_finds_hdfc():
     assert any(row["symbol"] == "HDFCBANK.NS" for row in rows)
 
 
+def test_nifty500_includes_itc():
+    from backend.integrations.india import NIFTY_500, list_universes
+
+    assert any(symbol == "ITC.NS" for symbol, _name, _sector in NIFTY_500)
+    assert len(NIFTY_500) > 400
+    nifty500 = next(item for item in list_universes() if item["id"] == "NIFTY500")
+    assert any(row["name"].upper().startswith("ITC") for row in nifty500["stocks"])
+
+
 def test_normalize_does_not_invent_prices():
     state = {
         "final_trade_decision": "**Rating**: Buy\n\n**Executive Summary**: Strong cash flows.\n\n**Investment Thesis**: Balance sheet is healthy.",

@@ -60,6 +60,7 @@ include = ["tradingagents*", "cli*", "backend*"]
 
 [tool.setuptools.package-data]
 cli = ["static/*"]
+backend = ["data/*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
