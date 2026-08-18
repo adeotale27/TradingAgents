@@ -28,7 +28,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
             <button
               key={item}
               onClick={() => setRange(item)}
-              className={`rounded px-2 py-1 text-xs ${range === item ? "bg-ink-600 text-white" : "text-mist"}`}
+              className={`rounded px-2 py-1 text-xs ${range === item ? "bg-ink-600" : "text-mist"}`}
             >
               {item}
             </button>

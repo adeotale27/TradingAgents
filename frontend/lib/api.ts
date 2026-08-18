@@ -91,7 +91,22 @@ export const api = {
       body: JSON.stringify(body),
     }),
   getAnalysis: (id: string) => request<Analysis>(`/api/v1/analysis/${id}`),
-  listAnalysis: (params = "") => request<{ items: Analysis[] }>(`/api/v1/analysis${params}`),
+  listAnalysis: (params = "") =>
+    request<{ items: Analysis[]; total?: number; limit?: number; offset?: number }>(`/api/v1/analysis${params}`),
+  scorecard: () =>
+    request<{
+      total_analyses: number;
+      buy: number;
+      hold: number;
+      sell: number;
+      completed: number;
+      failed: number;
+      cancelled: number;
+      queued: number;
+      running: number;
+      average_confidence: number | null;
+      average_duration_seconds: number | null;
+    }>("/api/v1/scorecard"),
   cancelAnalysis: (id: string) =>
     request<Analysis>(`/api/v1/analysis/${id}/cancel`, { method: "POST" }),
   watchlist: () =>
@@ -116,5 +131,18 @@ export const api = {
     request<Record<string, unknown>>("/api/v1/backtests", { method: "POST", body: JSON.stringify(body) }),
   adminHealth: () => request<Record<string, unknown>>("/api/v1/admin/health"),
   adminUsers: () => request<{ items: User[] }>("/api/v1/admin/users"),
-  adminLogs: () => request<{ events: unknown[]; analyses: unknown[] }>("/api/v1/admin/logs"),
+  adminLogs: () =>
+    request<{
+      events: unknown[];
+      analyses: {
+        id: string;
+        symbol: string;
+        company_name?: string;
+        status: string;
+        error?: string | null;
+        error_category?: string | null;
+        error_friendly?: string | null;
+        created_at?: string;
+      }[];
+    }>("/api/v1/admin/logs"),
 };

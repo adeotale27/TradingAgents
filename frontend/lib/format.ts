@@ -36,5 +36,6 @@ export function decisionClass(action?: string | null) {
   const key = (action || "").toUpperCase();
   if (key === "BUY" || key === "OVERWEIGHT") return "text-gain border-gain/30 bg-gain/10";
   if (key === "SELL" || key === "UNDERWEIGHT") return "text-loss border-loss/30 bg-loss/10";
-  return "text-warn border-warn/30 bg-warn/10";
+  if (key === "HOLD") return "text-warn border-warn/30 bg-warn/10";
+  return "text-mist border-line bg-elevated";
 }

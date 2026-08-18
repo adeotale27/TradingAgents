@@ -2,21 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+html.dark {
   color-scheme: dark;
+  --background: #07090d;
+  --surface: #101820;
+  --surface-elevated: #16202b;
+  --border: #2a3d52;
+  --text-primary: #e8eef4;
+  --text-secondary: #8fa3b8;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-fg: #f8fbff;
+  --brand: #c8a15a;
+  --success: #3dd68c;
+  --danger: #ef6b6b;
+  --warning: #e7b549;
+  --info: #5b9fd6;
+}
+
+html.light {
+  color-scheme: light;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-elevated: #f3f6fa;
+  --border: #d5dee8;
+  --text-primary: #0d1b2a;
+  --text-secondary: #5c6e80;
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
+  --primary-fg: #ffffff;
+  --brand: #b45309;
+  --success: #047857;
+  --danger: #b91c1c;
+  --warning: #b45309;
+  --info: #1d4ed8;
 }
 
 html,
 body {
-  background: #07090d;
-  color: #e8eef4;
+  background: var(--background);
+  color: var(--text-primary);
 }
 
 body {
+  background-image: none;
+}
+
+html.dark body {
   background-image:
-    radial-gradient(900px 420px at 8% -8%, rgba(200, 161, 90, 0.12), transparent 45%),
-    radial-gradient(700px 360px at 100% 0%, rgba(61, 214, 140, 0.05), transparent 40%),
-    linear-gradient(180deg, #07090d 0%, #0b1016 100%);
+    radial-gradient(900px 420px at 8% -8%, rgba(59, 130, 246, 0.08), transparent 45%),
+    linear-gradient(180deg, var(--background) 0%, #0b1016 100%);
 }
 
 .tabular {
@@ -29,6 +65,9 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #243140;
-  border-radius: 999px;
+  background: var(--border);
+}
+
+.skeleton {
+  @apply animate-pulse rounded-md bg-elevated;
 }

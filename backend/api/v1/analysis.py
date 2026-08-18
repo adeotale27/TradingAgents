@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from backend.core.db import get_db
 from backend.core.deps import get_current_user
+from backend.integrations.india import universe_rows
 from backend.models import Analysis, User
 from backend.schemas import AnalysisCreate, AnalysisQueued
 from backend.services.analysis import ActiveRunError, cancel_analysis, create_analysis
@@ -42,20 +44,48 @@ def list_analysis(
     user: User = Depends(get_current_user),
     symbol: str | None = None,
     decision: str | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
 ):
-    query = (
-        db.query(Analysis)
-        .options(joinedload(Analysis.agents))
-        .filter(Analysis.user_id == user.id)
-        .order_by(Analysis.created_at.desc())
-    )
+    query = db.query(Analysis).filter(Analysis.user_id == user.id)
     if symbol:
         query = query.filter(Analysis.symbol == symbol.upper())
-    rows = query.limit(100).unique().all()
-    items = [serialize_analysis(row, include_payload=False) for row in rows]
+    if status:
+        wanted = []
+        for part in status.split(","):
+            key = part.strip().lower()
+            if key == "running":
+                wanted.extend(["queued", "running"])
+            elif key:
+                wanted.append(key)
+        if wanted:
+            query = query.filter(Analysis.status.in_(sorted(set(wanted))))
+    if q:
+        needle = q.strip().upper()
+        names = [ticker for ticker, name, _ in universe_rows("ALL") if needle in ticker.upper() or needle in name.upper()]
+        query = query.filter(or_(Analysis.symbol.contains(needle), Analysis.symbol.in_(names or ["__none__"])))
     if decision:
-        items = [item for item in items if (item.final_decision or "").upper() == decision.upper()]
-    return {"items": items}
+        query = query.filter(Analysis.final_decision == decision.upper())
+    total = query.count()
+    page_ids = [row.id for row in query.order_by(Analysis.created_at.desc()).offset(offset).limit(limit).all()]
+    if not page_ids:
+        return {"items": [], "total": total, "limit": limit, "offset": offset}
+    rows = (
+        db.query(Analysis)
+        .options(joinedload(Analysis.agents), joinedload(Analysis.decision))
+        .filter(Analysis.id.in_(page_ids))
+        .all()
+    )
+    by_id = {row.id: row for row in rows}
+    ordered = [by_id[item_id] for item_id in page_ids if item_id in by_id]
+    return {
+        "items": [serialize_analysis(row, include_payload=False) for row in ordered],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/{analysis_id}")

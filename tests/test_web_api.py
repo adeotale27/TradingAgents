@@ -97,3 +97,23 @@ def test_watchlist_and_settings_roundtrip():
         assert saved.status_code == 200
         assert saved.json()["research_depth"] == "shallow"
         assert saved.json()["enable_news"] is False
+
+
+def test_scorecard_and_analysis_list_shape():
+    with TestClient(app) as client:
+        token = client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@local", "password": "admin123"},
+        ).json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        listed = client.get("/api/v1/analysis", params={"limit": 10, "offset": 0}, headers=headers)
+        assert listed.status_code == 200
+        body = listed.json()
+        assert "items" in body
+        assert "total" in body
+        score = client.get("/api/v1/scorecard", headers=headers)
+        assert score.status_code == 200
+        data = score.json()
+        assert "total_analyses" in data
+        assert "average_confidence" in data
+        assert "buy" in data

@@ -11,10 +11,10 @@ const GROUPS = [
 ];
 
 function mark(status: string) {
-  if (status === "completed") return { glyph: "✓", label: "DONE", className: "text-gain" };
-  if (status === "running") return { glyph: "●", label: "NOW", className: "text-gold animate-pulse" };
+  if (status === "completed") return { glyph: "✓", label: "COMPLETE", className: "text-gain" };
+  if (status === "running") return { glyph: "●", label: "RUNNING", className: "text-gold animate-pulse" };
   if (status === "failed") return { glyph: "!", label: "FAILED", className: "text-loss" };
-  return { glyph: "○", label: "NEXT", className: "text-mist" };
+  return { glyph: "○", label: "WAITING", className: "text-mist" };
 }
 
 export function AgentRail({ agents }: { agents: AgentResult[] }) {

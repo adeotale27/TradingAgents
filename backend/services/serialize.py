@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from datetime import datetime, timezone
 
+from backend.integrations.errors import classify_error
+from backend.integrations.india import catalog_name
 from backend.integrations.pipeline import progress_from_agents
-from backend.models import AgentResult, Analysis, Decision
+from backend.models import AgentResult, Analysis
 from backend.schemas import AgentResultOut, AnalysisOut, DecisionOut
 
 
@@ -16,6 +18,9 @@ def serialize_analysis(analysis: Analysis, include_payload: bool = True) -> Anal
         except json.JSONDecodeError:
             payload = None
     agents = [_agent(row) for row in sorted(analysis.agents, key=lambda a: a.agent_name)]
+    category, friendly = (None, None)
+    if analysis.status == "failed":
+        category, friendly = classify_error(analysis.error_message)
     decision = None
     if analysis.decision:
         decision = DecisionOut(
@@ -43,6 +48,10 @@ def serialize_analysis(analysis: Analysis, include_payload: bool = True) -> Anal
         confidence=analysis.confidence,
         risk_level=analysis.risk_level,
         error_message=analysis.error_message,
+        error_category=category,
+        error_friendly=friendly,
+        company_name=catalog_name(analysis.symbol),
+        duration_seconds=_duration_seconds(analysis),
         started_at=analysis.started_at,
         completed_at=analysis.completed_at,
         created_at=analysis.created_at,
@@ -51,6 +60,20 @@ def serialize_analysis(analysis: Analysis, include_payload: bool = True) -> Anal
         payload=payload if include_payload else None,
         progress=progress_from_agents(analysis.agents, analysis.status),
     )
+
+
+def _duration_seconds(analysis: Analysis) -> float | None:
+    start = analysis.started_at or analysis.created_at
+    if not start:
+        return None
+    end = analysis.completed_at
+    if not end and analysis.status in {"queued", "running"}:
+        end = datetime.now(timezone.utc)
+        if start.tzinfo is None:
+            end = end.replace(tzinfo=None)
+    if not end:
+        return None
+    return max(0.0, (end - start).total_seconds())
 
 
 def _agent(row: AgentResult) -> AgentResultOut:

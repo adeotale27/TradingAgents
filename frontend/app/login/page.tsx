@@ -29,7 +29,7 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6">
-      <p className="text-xs tracking-[0.28em] text-gold">INDIAN EQUITIES RESEARCH TERMINAL</p>
+      <p className="text-xs tracking-[0.28em] text-brand">INDIAN EQUITIES RESEARCH TERMINAL</p>
       <h1 className="mt-3 text-3xl font-semibold">TradingAgents</h1>
       <p className="mt-2 text-sm text-mist">
         Multi-agent research for NSE/BSE names. This is a decision aid, not a broker and not a profit guarantee.
@@ -41,7 +41,7 @@ export default function LoginPage() {
         <input className="w-full rounded-md border border-line bg-ink-900 px-3 py-2" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
         <input className="w-full rounded-md border border-line bg-ink-900 px-3 py-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
         {error && <p className="text-sm text-loss">{error}</p>}
-        <button className="w-full rounded-md bg-gold py-2 text-sm font-semibold text-ink-950">
+        <button className="w-full rounded-md bg-gold py-2 text-sm font-semibold text-primary-fg">
           {mode === "login" ? "Enter terminal" : "Create local account"}
         </button>
         <button type="button" className="w-full text-sm text-mist" onClick={() => setMode(mode === "login" ? "register" : "login")}>

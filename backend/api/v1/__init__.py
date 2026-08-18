@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.api.v1 import admin, analysis, auth, backtests, llm, market, settings, stocks, watchlist
+from backend.api.v1 import admin, analysis, auth, backtests, llm, market, scorecard, settings, stocks, watchlist
 from backend.core.version import APP_VERSION, ENGINE_VERSION
 
 api_router = APIRouter(prefix="/api/v1")
@@ -13,6 +13,7 @@ api_router.include_router(backtests.router)
 api_router.include_router(admin.router)
 api_router.include_router(llm.router)
 api_router.include_router(market.router)
+api_router.include_router(scorecard.router)
 
 
 @api_router.get("/health")
