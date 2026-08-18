@@ -3,8 +3,10 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from backend.core.config import get_settings
-from backend.core.db import engine, get_db
+from backend.core.db import get_db
 from backend.core.deps import get_admin_user
+from backend.integrations.errors import classify_error
+from backend.integrations.india import catalog_name
 from backend.models import Analysis, AnalysisEvent, User
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -52,10 +54,14 @@ def admin_logs(db: Session = Depends(get_db), _admin: User = Depends(get_admin_u
             {
                 "id": a.id,
                 "symbol": a.symbol,
+                "company_name": catalog_name(a.symbol),
                 "status": a.status,
                 "error": a.error_message,
+                "error_category": classify_error(a.error_message)[0] if a.status == "failed" else None,
+                "error_friendly": classify_error(a.error_message)[1] if a.status == "failed" else None,
                 "provider": a.provider,
                 "model": a.model,
+                "created_at": a.created_at,
             }
             for a in analyses
         ],

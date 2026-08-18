@@ -55,6 +55,10 @@ export type Analysis = {
   confidence: number | null;
   risk_level: string | null;
   error_message: string | null;
+  error_category?: string | null;
+  error_friendly?: string | null;
+  company_name?: string | null;
+  duration_seconds?: number | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string | null;

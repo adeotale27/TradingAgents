@@ -6,11 +6,13 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AgentRail } from "@/components/AgentRail";
 import { DecisionBadge } from "@/components/DecisionBadge";
+import { Dropdown } from "@/components/Dropdown";
 import { InfoTip } from "@/components/InfoTip";
 import { StatusChip } from "@/components/JobQueue";
 import { PriceChart } from "@/components/PriceChart";
 import { StateBlock } from "@/components/StateBlock";
 import { api } from "@/lib/api";
+import { startAnalysisJob } from "@/lib/jobs";
 import { inr, pct, signedClass } from "@/lib/format";
 
 const TABS = ["Overview", "Technical", "Fundamental", "Sentiment", "News", "AI Debate", "Risk", "Decision", "History"];
@@ -45,27 +47,8 @@ function AnalyzeInner() {
     enabled: Boolean(latest?.analysis_id),
   });
   const start = useMutation({
-    mutationFn: () =>
-      api.startAnalysis({
-        symbol,
-        research_depth: depth,
-        llm_provider: settings.data?.llm_provider,
-        model: settings.data?.model,
-        quick_model: settings.data?.quick_model,
-        selected_analysts: [
-          settings.data?.enable_technical === false ? null : "market",
-          settings.data?.enable_sentiment === false ? null : "social",
-          settings.data?.enable_news === false ? null : "news",
-          settings.data?.enable_fundamentals === false ? null : "fundamentals",
-        ].filter(Boolean),
-      }),
-    onSuccess: (res) => router.push(`/analyze/${encodeURIComponent(symbol)}/running?id=${res.analysis_id}`),
-    onError: (err) => {
-      const detail = (err as { detail?: { analysis_id?: string } }).detail;
-      if (detail?.analysis_id) {
-        router.push(`/analyze/${encodeURIComponent(symbol)}/running?id=${detail.analysis_id}`);
-      }
-    },
+    mutationFn: () => startAnalysisJob(symbol, settings.data, { research_depth: depth }),
+    onSuccess: (res) => router.push(`/jobs/${res.analysis_id}`),
   });
   const cancel = useMutation({
     mutationFn: () => api.cancelAnalysis(active!.analysis_id),
@@ -90,14 +73,20 @@ function AnalyzeInner() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={depth} onChange={(e) => setDepth(e.target.value)} className="rounded-md border border-line bg-ink-800 px-2 py-2 text-sm">
-            <option value="shallow">Shallow</option>
-            <option value="medium">Medium</option>
-            <option value="deep">Deep</option>
-          </select>
+          <div className="w-36">
+            <Dropdown
+              value={depth}
+              onChange={setDepth}
+              options={[
+                { id: "shallow", label: "Shallow" },
+                { id: "medium", label: "Medium" },
+                { id: "deep", label: "Deep" },
+              ]}
+            />
+          </div>
           <button
             onClick={() => start.mutate()}
-            className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-ink-950 disabled:opacity-50"
+            className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-primary-fg disabled:opacity-50"
             disabled={start.isPending || Boolean(active)}
           >
             {active ? `Already ${active.status}` : start.isPending ? "Queuing…" : "ANALYZE"}
@@ -105,7 +94,7 @@ function AnalyzeInner() {
           {active && (
             <>
               <Link
-                href={`/analyze/${encodeURIComponent(symbol)}/running?id=${active.analysis_id}`}
+                href={`/jobs/${active.analysis_id}`}
                 className="rounded-md border border-gold/40 px-3 py-2 text-sm text-gold"
               >
                 Open job
@@ -192,7 +181,7 @@ function AnalyzeInner() {
         </div>
       )}
       {tab === "Decision" && latest && (
-        <Link href={`/runs/${latest.analysis_id}/decision`} className="block rounded-xl border border-gold/40 bg-ink-800 p-6">
+        <Link href={`/jobs/${latest.analysis_id}`} className="block rounded-md border border-gold/40 bg-surface p-6">
           <p className="text-xs text-mist">Open full decision desk</p>
           <div className="mt-3">
             <DecisionBadge action={detail.data?.final_decision} size="lg" />
@@ -217,7 +206,7 @@ function AnalyzeInner() {
                     <DecisionBadge action={row.final_decision} size="sm" />
                   </td>
                   <td className="px-3 py-2">
-                    <Link href={`/runs/${row.analysis_id}`} className="text-gold">
+                    <Link href={`/jobs/${row.analysis_id}`} className="text-gold">
                       {row.status}
                     </Link>
                   </td>

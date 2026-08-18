@@ -61,6 +61,10 @@ class AnalysisOut(BaseModel):
     confidence: float | None = None
     risk_level: str | None = None
     error_message: str | None = None
+    error_category: str | None = None
+    error_friendly: str | None = None
+    company_name: str | None = None
+    duration_seconds: float | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
     created_at: datetime | None = None
